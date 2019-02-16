@@ -51,7 +51,7 @@ namespace Hollan.Function
                 }
                 else 
                 {
-                    log.LogCritical($"Exhausted all retries for message sequence # {message.SystemProperties.SequenceNumber}");
+                    log.LogCritical($"Exhausted all retries for message sequence # {message.UserProperties["original-SequenceNumber"]}");
                 }
             }
         }
