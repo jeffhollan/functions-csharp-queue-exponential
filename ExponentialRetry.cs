@@ -15,14 +15,16 @@ namespace Hollan.Function
         [FunctionName("ExponentialRetry")]
         public static async Task Run(
             [ServiceBusTrigger("queue", Connection = "ServiceBusConnectionString")]Message message,
+            string lockToken,
+            MessageReceiver MessageReceiver,
             [ServiceBus("queue", Connection = "ServiceBusConnectionString")] MessageSender sender,
             ILogger log)
         {
             try
             {
                 log.LogInformation($"C# ServiceBus queue trigger function processed message sequence #{message.SystemProperties.SequenceNumber}");
-
                 throw new Exception("Some exception");
+                await MessageReceiver.CompleteAsync(lockToken);
             }
             catch (Exception ex)
             {
@@ -46,12 +48,16 @@ namespace Hollan.Function
 
                     retryMessage.UserProperties["retry-count"] = retryCount;
                     await sender.ScheduleMessageAsync(retryMessage, scheduledTime);
+                    await MessageReceiver.CompleteAsync(lockToken);
 
                     log.LogInformation($"Scheduling message retry {retryCount} to wait {interval} seconds and arrive at {scheduledTime.UtcDateTime}");
                 }
+
+                // If there are no more retries, deadletter the message (note the host.json config that enables this)
                 else 
                 {
                     log.LogCritical($"Exhausted all retries for message sequence # {message.UserProperties["original-SequenceNumber"]}");
+                    await MessageReceiver.DeadLetterAsync(lockToken, "Exhausted all retries");
                 }
             }
         }
