@@ -10,7 +10,7 @@ namespace Hollan.Function
 {
     public static class ExponentialRetry
     {
-        private static int retryCount = 5;
+        private static int maxRetries = 5;
 
         [FunctionName("ExponentialRetry")]
         public static async Task Run(
@@ -39,7 +39,7 @@ namespace Hollan.Function
                 }
 
                 // If there are more retries available
-                if((int)message.UserProperties["retry-count"] < retryCount)
+                if((int)message.UserProperties["retry-count"] < maxRetries)
                 {
                     var retryMessage = message.Clone();
                     var retryCount = (int)message.UserProperties["retry-count"] + 1;
